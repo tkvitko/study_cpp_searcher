@@ -23,7 +23,6 @@ public:
     bool insertPresence(WordPresence presence);
     // метод для получения наличия слов по поисковому запросу
     std::vector<std::string> getSortedUrlsByWords(std::vector<std::string> words);
-    // метод проверки, есть ли слово в базе данных
 
 private:
     // параметры подключения к базе данных
