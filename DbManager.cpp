@@ -183,7 +183,7 @@ std::vector<std::string> DbManager::getSortedUrlsByWords(std::vector<std::string
 
     std::vector<std::string> sortedUrls;
     pqxx::work tx{ *conn };
-    for (auto& [url, freq] : tx.query<int>("select u.url, sum(f.frequency) sum_freq from frequencies f"
+    for (auto& [url, freq] : tx.query<std::string, int>("select u.url, sum(f.frequency) sum_freq from frequencies f"
     "join words w on f.word_id = w.id"
     "join urls u on f.url_id = u.id"
     "where word_id in (" + getStringFromVector(word_ids) + ")"
