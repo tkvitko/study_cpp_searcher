@@ -6,7 +6,7 @@
 
 int main()
 {
-    Crowler crowler = Crowler();
+    // Crowler crowler = Crowler();
     // std::string res = crowler.download("litres.ru");
     // std::cout << res << std::endl;
     // std::vector<std::string> words = crowler.getWords(res);
@@ -25,9 +25,25 @@ int main()
     // }
 
     // std::vector<int> test = {1, 2, 3, 4, 5};
-    // DbManager dbManager = DbManager();
-    // std::string res = dbManager.getStringFromVector(test);
-    // std::cout << res << std::endl;
+    DbManager dbManager = DbManager();
+    // unsigned int id = dbManager.insertWord("какжетак6");
+    // std::cout << id << std::endl;
+
+    // dbManager.insertWord("привет");
+    // dbManager.insertWord("мир");
+    // dbManager.insertWord("пока");
+    // dbManager.insertUrl("www.yandex.ru");
+    // dbManager.insertUrl("www.google.com");
+    // dbManager.insertUrl("www.yahoo.com");
+
+    unsigned int id = dbManager.getWordId("привет");
+    std::cout << id << std::endl;
+
+    std::string url = "www.yandex.ru";
+    std::string word = "привет";
+    unsigned short frequency = 2;
+    WordPresence presence = {word, url, frequency};
+    dbManager.insertPresence(presence);
 
     return 0;
 }

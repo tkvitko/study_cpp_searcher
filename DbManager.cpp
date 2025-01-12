@@ -70,31 +70,48 @@ std::string DbManager::getStringFromVector(std::vector<int> sourceVector)
     return line;
 }
 
-bool DbManager::insertWord(std::string word)
+template <typename T>
+std::vector<std::pair<T, std::size_t>> DbManager::adjacent_count(const std::vector<T>& v)
+// https://stackoverflow.com/questions/39596336/how-to-count-equal-adjacent-elements-in-a-vector
+{
+    std::vector<std::pair<T, std::size_t>> res;
+
+    for (auto it = v.begin(), e = v.end(); it != e; /*Empty*/) {
+        auto it2 = std::adjacent_find(it, e, std::not_equal_to<>{});
+        if (it2 != e) {
+            ++it2;
+        }
+        res.emplace_back(*it, std::distance(it, it2));
+        it = it2;
+    }
+    return res;
+}
+
+unsigned int DbManager::insertWord(std::string word)
 {
     try {
         pqxx::transaction<> tx{ *conn };
-        tx.exec("insert into words (word)"
-                "values ('" + tx.esc(word) + "');");
+        pqxx::result r = tx.exec("insert into words (word)"
+                "values ('" + tx.esc(word) + "') returning id;");
         tx.commit();
-        return true;
+        return r.inserted_oid();
 
     } catch(std::exception const& e) {
-        return false;
+        return 0;
     }
 }
 
-bool DbManager::insertUrl(std::string url)
+unsigned int DbManager::insertUrl(std::string url)
 {
     try {
         pqxx::transaction<> tx{ *conn };
-        tx.exec("insert into urls (url)"
-                "values ('" + tx.esc(url) + "');");
+        pqxx::result r = tx.exec("insert into urls (url)"
+                "values ('" + tx.esc(url) + "') RETURNING id;");
         tx.commit();
-        return true;
+        return r.inserted_oid();
 
     } catch(std::exception const& e) {
-        return false;
+        return 0;
     }
 }
 
@@ -107,18 +124,25 @@ bool DbManager::insertPresence(WordPresence presence)
         unsigned short frequency = presence.frequency;
 
         // если слова нет в таблице слов, добавляем
-        if (!checkWordExists(word)) {
-            insertWord(word);
+        unsigned int wordId = getWordId(word);
+        if (wordId == 0) {
+            wordId = insertWord(word); // здесь почему-то всегда 0, потому получаем отдельным запросом ниже
+            wordId = getWordId(word);
         }
 
         // если ресурса нет в таблице ресурсов, добавляем
-        if (!checkUrlExists(url)) {
-            insertUrl(url);
+        unsigned int urlId = getUrlId(url);
+        if (urlId == 0) {
+            urlId = insertWord(url); // здесь почему-то всегда 0, потому получаем отдельным запросом ниже
+            urlId = getUrlId(url);
         }
 
+        std::string wordIdStr = std::to_string(wordId);
+        std::string urlIdStr = std::to_string(urlId);
+
         // добавляем новую частоту слова на ресурсе
-        tx.exec("insert into frequencies (word, url, frequency)"
-                "values ('" + tx.esc(word) + "', '" + tx.esc(url) + "', '" + tx.esc(std::to_string(frequency)) + "');");
+        tx.exec("insert into frequencies (word_id, url_id, frequency)"
+                "values ('" + tx.esc(wordIdStr) + "', '" + tx.esc(urlIdStr) + "', '" + tx.esc(std::to_string(frequency)) + "') RETURNING id;");
         tx.commit();
         return true;
 
@@ -127,31 +151,26 @@ bool DbManager::insertPresence(WordPresence presence)
     }
 }
 
-bool DbManager::checkWordExists(std::string word)
+unsigned int DbManager::getWordId(std::string word)
 {
-    pqxx::work tx{ *conn };
-    auto id = tx.query_value<int>("select id from words " "where word = '" + tx.esc(word) + "';");
-    if (id) {
-        return true;
+    try {
+        pqxx::work tx{ *conn };
+        unsigned int id = tx.query_value<unsigned int>("select id from words " "where word = '" + tx.esc(word) + "';");
+        return id;
+    } catch (std::exception const& ) {
+        return 0;
     }
-    return false;
 }
 
-bool DbManager::checkUrlExists(std::string url)
+unsigned int DbManager::getUrlId(std::string url)
 {
-    pqxx::work tx{ *conn };
-    auto id = tx.query_value<int>("select id from urls " "where url = '" + tx.esc(url) + "';");
-    if (id) {
-        return true;
+    try {
+        pqxx::work tx{ *conn };
+        unsigned int id = tx.query_value<unsigned int>("select id from urls " "where url = '" + tx.esc(url) + "';");
+        return id;
+    } catch (std::exception const& ) {
+        return 0;
     }
-    return false;
-}
-
-int DbManager::getWordId(std::string word)
-{
-    pqxx::work tx{ *conn };
-    int id = tx.query_value<int>("select id from words " "where word = '" + tx.esc(word) + "';");
-    return id;
 }
 
 std::vector<int> DbManager::getWordsIds(std::vector<std::string> words)
@@ -178,47 +197,22 @@ std::vector<int> DbManager::getUrlsIdsByWord(std::string word)
 
 std::vector<int> DbManager::getUrlsIdsByWords(std::vector<std::string> words)
 {
-    // вектор векторов для хранения списков ресерсов для каждого слова
-    std::vector<std::vector<int>> urlIdsBatches;
-    for (auto& word : words) {
-        std::vector<int> urlIds = getUrlsIdsByWord(word);
-        urlIdsBatches.push_back(urlIds);
+    std::vector<int> urlIds;
+    std::vector<int> urlIdsAccepted;
+    std::vector<int> word_ids = getWordsIds(words);
+    pqxx::work tx{ *conn };
+    for (auto [urlIdd] : tx.query<int>("select url_id from frequencies " "where word_id in '" + getStringFromVector(word_ids) + "';")) {
+        urlIds.push_back(urlIdd);
     }
 
-    // вектор ресурсов, в которых есть все запрошенные слова
-    std::vector<int> intersection;
-
-    if (urlIdsBatches.size() == 1) {
-        // если слово одно, список ресурсов уже готов
-        intersection = urlIdsBatches[0];
-    } else {
-        // сортировка векторов
-        for (std::vector<int> urlIdsBatche : urlIdsBatches ) {
-            std::sort(urlIdsBatche.begin(), urlIdsBatche.end());
-        }
-
-        // берем пересечение первых двух векторов
-        std::vector<int> v1 = urlIdsBatches.back();
-        urlIdsBatches.pop_back();
-
-        std::vector<int> v2 = urlIdsBatches.back();
-        urlIdsBatches.pop_back();
-
-        std::set_intersection(v1.begin(),v1.end(),
-                              v2.begin(),v2.end(),
-                              back_inserter(intersection));
-
-        // пока в списке ещё есть вектора, вынимаем их и делаем пересечение с текущим результатом
-        while (urlIdsBatches.size() != 0) {
-            std::vector<int> vx = urlIdsBatches.back();
-            urlIdsBatches.pop_back();
-            std::set_intersection(vx.begin(),vx.end(),
-                                  intersection.begin(),intersection.end(),
-                                  back_inserter(intersection));
+    for (auto pair : adjacent_count(urlIds)) {
+        int urlId = pair.first;
+        int count = pair.second;
+        if (words.size() == count) {
+            urlIdsAccepted.push_back(urlId);
         }
     }
-    // в итоге в intersection хранится список ресурсов, в которых нашлись все запрошенные слова
-    return intersection;
+    return urlIdsAccepted;
 }
 
 std::vector<std::string> DbManager::getSortedUrlsByWords(std::vector<std::string> words)

@@ -24,7 +24,7 @@ public:
     // метод для получения наличия слов по поисковому запросу
     std::vector<std::string> getSortedUrlsByWords(std::vector<std::string> words);
 
-private:
+// private:
     // параметры подключения к базе данных
     pqxx::connection* conn = nullptr;
 
@@ -38,16 +38,17 @@ private:
     void createTables();
     // метод для перевода вектора строк в форматированную строку
     std::string getStringFromVector(std::vector<int> sourceVector);
+    // методя для получения количества одинаковых значений в векторе
+    template <typename T>
+    std::vector<std::pair<T, std::size_t>> adjacent_count(const std::vector<T>& v);
     // метод для добавления нового слова в базу данных
-    bool insertWord(std::string word);
+    unsigned int insertWord(std::string word);
     // метод для добавления нового ресурса в базу данных
-    bool insertUrl(std::string url);
-    // метод проверки, есть ли слово в базе данных
-    bool checkWordExists(std::string word);
-    // метод проверки, есть ли ресурс в базе данных
-    bool checkUrlExists(std::string url);
+    unsigned int insertUrl(std::string url);
     // метод для получения id слова
-    int getWordId(std::string word);
+    unsigned int getWordId(std::string word);
+    // метод для получения id ресурса
+    unsigned int getUrlId(std::string url);
     // метод для получения id слов
     std::vector<int> getWordsIds(std::vector<std::string> words);
     // метод для получения всех ресурсов, содержащих слово
