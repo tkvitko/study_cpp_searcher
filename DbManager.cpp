@@ -197,7 +197,7 @@ std::vector<int> DbManager::getUrlsIdsByWord(std::string word)
     std::string wordIdStr = std::to_string(wordId);
 
     pqxx::work tx{ *conn };
-    for (auto [id] : tx.query<int>("select id from frequencies " "where word_id = '" + tx.esc(wordIdStr) + "';")) {
+    for (auto [id] : tx.query<int>("select url_id from frequencies " "where word_id = '" + tx.esc(wordIdStr) + "';")) {
         urlIds.push_back(id);
     }
     return urlIds;
@@ -209,7 +209,7 @@ std::vector<int> DbManager::getUrlsIdsByWords(std::vector<std::string> words)
     std::vector<int> urlIdsAccepted;
     std::vector<int> word_ids = getWordsIds(words);
     pqxx::work tx{ *conn };
-    for (auto [urlIdd] : tx.query<int>("select url_id from frequencies " "where word_id in '" + getStringFromVector(word_ids) + "';")) {
+    for (auto [urlIdd] : tx.query<int>("select url_id from frequencies " "where word_id in (" + getStringFromVector(word_ids) + ");")) {
         urlIds.push_back(urlIdd);
     }
 
@@ -230,12 +230,12 @@ std::vector<std::string> DbManager::getSortedUrlsByWords(std::vector<std::string
 
     std::vector<std::string> sortedUrls;
     pqxx::work tx{ *conn };
-    for (auto& [url, freq] : tx.query<std::string, int>("select u.url, sum(f.frequency) sum_freq from frequencies f"
-                                                        "join words w on f.word_id = w.id"
-                                                        "join urls u on f.url_id = u.id"
-                                                        "where word_id in (" + getStringFromVector(word_ids) + ")"
-                                                        "and url_id in (" + getStringFromVector(url_ids) + ")"
-                                                        "group by url"
+    for (auto& [url, freq] : tx.query<std::string, int>("select u.url, sum(f.frequency) sum_freq from frequencies f "
+                                                        "join words w on f.word_id = w.id "
+                                                        "join urls u on f.url_id = u.id "
+                                                        "where word_id in (" + getStringFromVector(word_ids) + ") "
+                                                        "and url_id in (" + getStringFromVector(url_ids) + ") "
+                                                        "group by url "
                                                         "order by sum_freq DESC")) {
         sortedUrls.push_back(url);
     }

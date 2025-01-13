@@ -40,11 +40,28 @@ int main()
     // unsigned int id = dbManager.getWordId("привет");
     // std::cout << id << std::endl;
 
-    std::string url = "www.yandex3.ru";
-    std::string word = "новое3";
-    unsigned short frequency = 2;
-    WordPresence presence = {word, url, frequency};
-    dbManager.insertPresence(presence);
+    // std::string url = "www.yahoo.com";
+    // std::string word = "мир";
+    // unsigned short frequency = 1;
+    // WordPresence presence = {word, url, frequency};
+    // dbManager.insertPresence(presence);
+
+    // std::vector<int> urlIds = dbManager.getUrlsIdsByWord("привет");
+    // for (auto& i : urlIds) {
+    //     std::cout << i << std::endl;
+    // }
+
+    std::vector<std::string> words;
+    words.push_back("привет");
+    words.push_back("мир");
+    // std::vector<int> urlIds = dbManager.getUrlsIdsByWords(words);
+    // for (auto& i : urlIds) {
+    //     std::cout << i << std::endl;
+    // }
+    std::vector<std::string> urls = dbManager.getSortedUrlsByWords(words);
+    for (auto& i : urls) {
+        std::cout << i << std::endl;
+    }
 
     return 0;
 }
