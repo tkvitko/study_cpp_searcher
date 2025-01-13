@@ -31,16 +31,17 @@ int main()
 
     // dbManager.insertWord("привет");
     // dbManager.insertWord("мир");
-    // dbManager.insertWord("пока");
+    // unsigned int id = dbManager.insertWord("пока3");
+    // std::cout << id << std::endl;
     // dbManager.insertUrl("www.yandex.ru");
     // dbManager.insertUrl("www.google.com");
     // dbManager.insertUrl("www.yahoo.com");
 
-    unsigned int id = dbManager.getWordId("привет");
-    std::cout << id << std::endl;
+    // unsigned int id = dbManager.getWordId("привет");
+    // std::cout << id << std::endl;
 
-    std::string url = "www.yandex.ru";
-    std::string word = "привет";
+    std::string url = "www.yandex3.ru";
+    std::string word = "новое3";
     unsigned short frequency = 2;
     WordPresence presence = {word, url, frequency};
     dbManager.insertPresence(presence);

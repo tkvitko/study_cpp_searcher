@@ -91,10 +91,15 @@ unsigned int DbManager::insertWord(std::string word)
 {
     try {
         pqxx::transaction<> tx{ *conn };
-        pqxx::result r = tx.exec("insert into words (word)"
-                "values ('" + tx.esc(word) + "') returning id;");
+        pqxx::result r = tx.exec(
+            "insert into words (word)"
+            "values ('" + tx.esc(word) + "') returning id;"
+            );
         tx.commit();
-        return r.inserted_oid();
+        if (!r.empty()) {
+            return r[0][0].as<unsigned int>();
+        }
+        return 0;
 
     } catch(std::exception const& e) {
         return 0;
@@ -105,10 +110,15 @@ unsigned int DbManager::insertUrl(std::string url)
 {
     try {
         pqxx::transaction<> tx{ *conn };
-        pqxx::result r = tx.exec("insert into urls (url)"
-                "values ('" + tx.esc(url) + "') RETURNING id;");
+        pqxx::result r = tx.exec(
+            "insert into urls (url)"
+            "values ('" + tx.esc(url) + "') RETURNING id;"
+            );
         tx.commit();
-        return r.inserted_oid();
+        if (!r.empty()) {
+            return r[0][0].as<unsigned int>();
+        }
+        return 0;
 
     } catch(std::exception const& e) {
         return 0;
@@ -118,7 +128,6 @@ unsigned int DbManager::insertUrl(std::string url)
 bool DbManager::insertPresence(WordPresence presence)
 {
     try {
-        pqxx::transaction<> tx{ *conn };
         std::string word = presence.word;
         std::string url = presence.url;
         unsigned short frequency = presence.frequency;
@@ -126,21 +135,20 @@ bool DbManager::insertPresence(WordPresence presence)
         // если слова нет в таблице слов, добавляем
         unsigned int wordId = getWordId(word);
         if (wordId == 0) {
-            wordId = insertWord(word); // здесь почему-то всегда 0, потому получаем отдельным запросом ниже
-            wordId = getWordId(word);
+            wordId = insertWord(word);
         }
 
         // если ресурса нет в таблице ресурсов, добавляем
         unsigned int urlId = getUrlId(url);
         if (urlId == 0) {
-            urlId = insertWord(url); // здесь почему-то всегда 0, потому получаем отдельным запросом ниже
-            urlId = getUrlId(url);
+            urlId = insertUrl(url);
         }
 
         std::string wordIdStr = std::to_string(wordId);
         std::string urlIdStr = std::to_string(urlId);
 
         // добавляем новую частоту слова на ресурсе
+        pqxx::transaction<> tx{ *conn };
         tx.exec("insert into frequencies (word_id, url_id, frequency)"
                 "values ('" + tx.esc(wordIdStr) + "', '" + tx.esc(urlIdStr) + "', '" + tx.esc(std::to_string(frequency)) + "') RETURNING id;");
         tx.commit();
