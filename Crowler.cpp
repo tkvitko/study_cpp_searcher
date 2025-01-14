@@ -22,7 +22,7 @@ namespace ssl = net::ssl;       // from <boost/asio/ssl.hpp>
 using tcp = net::ip::tcp;           // from <boost/asio/ip/tcp.hpp>
 
 
-Crowler::Crowler() {}
+
 
 void Crowler::processUrl(std::string url, short depth)
 {
@@ -150,4 +150,43 @@ void Crowler::savePresencesToDb(std::vector<std::string> words, std::string url)
         dbManager.insertPresence(presence);
     }
 
+}
+
+Crowler::Crowler()
+{
+    const int cores_count = std::thread::hardware_concurrency();    // количество аппаратных ядер
+    for (size_t i = 0; i != cores_count; ++i) {
+        // наполнение вектора, хранящего потоки, задачами на обработку
+        std::thread t(&Crowler::work, this);
+        threadsPool_.push_back(std::move(t));
+    }
+}
+
+Crowler::~Crowler()
+{
+    for (auto& thread : threadsPool_) {
+        // ожидание окончания работы потоков
+        thread.join();
+    }
+    threadsPool_.clear();
+}
+
+void Crowler::addToCrowlingQueue(std::string url, unsigned short depth)
+{
+    UrlCrowlingTask task = {url, depth};
+    tasksQueue_.push(task);
+}
+
+void Crowler::work() {
+    while (true) {
+        if (!tasksQueue_.isEmpty()) {
+            // если в очереди задач есть задачи, вынимаем одну и выполняем
+            UrlCrowlingTask task;
+            tasksQueue_.pop(task);
+            processUrl(task.url, task.depth);
+        } else {
+            // иначе передаем управление другому потоку
+            std::this_thread::yield();
+        }
+    }
 }

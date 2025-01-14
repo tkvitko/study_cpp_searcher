@@ -3,11 +3,22 @@
 
 #include <string>
 #include <regex>
+#include <queue>
+#include <mutex>
+#include <vector>
+#include <thread>
 #include "DbManager.h"
+#include "SafeQueue.h""
 
 class Crowler
 {
 private:
+
+    // вектор для хранения потоков обработки задач
+    std::vector<std::thread> threadsPool_;
+    // очередь задач на обработку
+    SafeQueue tasksQueue_;
+
     // скачивание html по url
     std::string download(std::string url);
     // получение данных из HTML
@@ -18,10 +29,14 @@ private:
     std::vector<std::string> getSubUrls(std::string innerHtml);
     // вычисление частот слов и сохранение данных в базу
     void savePresencesToDb(std::vector<std::string> words, std::string url);
+    // обход ресурса
+    void processUrl(std::string url, short depth);
+    void work();
 
 public:
     Crowler();
-    void processUrl(std::string url, short depth);
+    ~Crowler();
+    void addToCrowlingQueue(std::string url, unsigned short depth);
 };
 
 #endif // CROWLER_H
