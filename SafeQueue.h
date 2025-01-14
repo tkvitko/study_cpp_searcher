@@ -4,9 +4,9 @@
 #include <queue>
 #include <mutex>
 
+
 struct UrlCrowlingTask {
     // Структура, описывающая задачу на обход ресурса
-    // std::function<void()> func;
     std::string url;
     unsigned short depth;
 };

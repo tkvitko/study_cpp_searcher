@@ -7,7 +7,10 @@
 
 int main()
 {
-    // Crowler crowler = Crowler();
+    // Тестирование
+
+    Crowler crowler = Crowler();
+    crowler.processStartPage();
     // std::string res = crowler.download("litres.ru");
     // std::cout << res << std::endl;
     // std::vector<std::string> words = crowler.getWords(res);
@@ -52,18 +55,18 @@ int main()
     //     std::cout << i << std::endl;
     // }
 
-    Searcher searcher = Searcher();
-    std::vector<std::string> words;
-    words.push_back("привет");
-    words.push_back("мир");
+    // Searcher searcher = Searcher();
+    // std::vector<std::string> words;
+    // words.push_back("привет");
+    // words.push_back("мир");
     // std::vector<int> urlIds = dbManager.getUrlsIdsByWords(words);
     // for (auto& i : urlIds) {
     //     std::cout << i << std::endl;
     // }
-    std::vector<std::string> urls = searcher.processSearchRequest(words);
-    for (auto& i : urls) {
-        std::cout << i << std::endl;
-    }
+    // std::vector<std::string> urls = searcher.processSearchRequest(words);
+    // for (auto& i : urls) {
+    //     std::cout << i << std::endl;
+    // }
 
     return 0;
 }

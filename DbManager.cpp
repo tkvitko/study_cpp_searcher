@@ -1,16 +1,25 @@
 #include "DbManager.h"
+#include "IniParser.h"
 #include <algorithm>
 
 
 
 DbManager::DbManager()
 {
+
+    IniParser parser("/Users/tkvitko/c/netology/cpp_diploma/cpp_search_qt_creator/config.ini"); // не хочет работать с "./config.ini"
+    std::string host = parser.get_value<std::string>("Db.host");
+    std::string port = parser.get_value<std::string>("Db.port");
+    std::string dbname = parser.get_value<std::string>("Db.name");
+    std::string user =  parser.get_value<std::string>("Db.userName");
+    std::string password = parser.get_value<std::string>("Db.password");
+
     try {
-        conn = new pqxx::connection("host=localhost "
-                                    "port=5432 "
-                                    "dbname=searcher "
-                                    "user=searcher "
-                                    "password=searcher");
+        conn = new pqxx::connection("host=" + host +
+                                    " port=" + port +
+                                    " dbname=" + dbname +
+                                    " user=" + user +
+                                    " password=" + password);
         createTables();
 
     } catch (pqxx::sql_error e) {

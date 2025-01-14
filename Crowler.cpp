@@ -14,6 +14,8 @@
 #include <iostream>
 #include <string>
 #include <unordered_map>
+#include "DbManager.h"
+#include "IniParser.h"
 
 namespace beast = boost::beast;     // from <boost/beast.hpp>
 namespace http = beast::http;       // from <boost/beast/http.hpp>
@@ -22,7 +24,24 @@ namespace ssl = net::ssl;       // from <boost/asio/ssl.hpp>
 using tcp = net::ip::tcp;           // from <boost/asio/ip/tcp.hpp>
 
 
+Crowler::Crowler()
+{
+    const int cores_count = std::thread::hardware_concurrency();    // количество аппаратных ядер
+    for (size_t i = 0; i != cores_count; ++i) {
+        // наполнение вектора, хранящего потоки, задачами на обработку
+        std::thread t(&Crowler::work, this);
+        threadsPool_.push_back(std::move(t));
+    }
+}
 
+Crowler::~Crowler()
+{
+    for (auto& thread : threadsPool_) {
+        // ожидание окончания работы потоков
+        thread.join();
+    }
+    threadsPool_.clear();
+}
 
 void Crowler::processUrl(std::string url, short depth)
 {
@@ -152,23 +171,13 @@ void Crowler::savePresencesToDb(std::vector<std::string> words, std::string url)
 
 }
 
-Crowler::Crowler()
-{
-    const int cores_count = std::thread::hardware_concurrency();    // количество аппаратных ядер
-    for (size_t i = 0; i != cores_count; ++i) {
-        // наполнение вектора, хранящего потоки, задачами на обработку
-        std::thread t(&Crowler::work, this);
-        threadsPool_.push_back(std::move(t));
-    }
-}
 
-Crowler::~Crowler()
+void Crowler::processStartPage()
 {
-    for (auto& thread : threadsPool_) {
-        // ожидание окончания работы потоков
-        thread.join();
-    }
-    threadsPool_.clear();
+    IniParser parser("/Users/tkvitko/c/netology/cpp_diploma/cpp_search_qt_creator/config.ini"); // не хочет работать с "./config.ini"
+    std::string url = parser.get_value<std::string>("Crowler.startPage");
+    unsigned short depth = parser.get_value<unsigned short>("Crowler.recursionDepth");
+    addToCrowlingQueue(url, depth);
 }
 
 void Crowler::addToCrowlingQueue(std::string url, unsigned short depth)

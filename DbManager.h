@@ -28,12 +28,6 @@ private:
     // параметры подключения к базе данных
     pqxx::connection* conn = nullptr;
 
-    std::string host;
-    int port;
-    std::string dbName;
-    std::string userName;
-    std::string password;
-
     // метод для создания таблиц базы данных, если их ещё нет
     void createTables();
     // метод для перевода вектора строк в форматированную строку

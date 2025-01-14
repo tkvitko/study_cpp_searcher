@@ -3,12 +3,9 @@
 
 #include <string>
 #include <regex>
-#include <queue>
-#include <mutex>
 #include <vector>
 #include <thread>
-#include "DbManager.h"
-#include "SafeQueue.h""
+#include "SafeQueue.h"
 
 class Crowler
 {
@@ -31,12 +28,16 @@ private:
     void savePresencesToDb(std::vector<std::string> words, std::string url);
     // обход ресурса
     void processUrl(std::string url, short depth);
+    // добавление задачи в очередь на обход
+    void addToCrowlingQueue(std::string url, unsigned short depth);
+    // методя для взятия очередной задачи на процессинг ресурса из очереди задач и процессинга
     void work();
 
 public:
     Crowler();
     ~Crowler();
-    void addToCrowlingQueue(std::string url, unsigned short depth);
+    // метод запуска процессинга стартового ресурса (из конфига)
+    void processStartPage();
 };
 
 #endif // CROWLER_H
