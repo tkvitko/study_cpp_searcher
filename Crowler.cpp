@@ -24,6 +24,24 @@ using tcp = net::ip::tcp;           // from <boost/asio/ip/tcp.hpp>
 
 Crowler::Crowler() {}
 
+void Crowler::processUrl(std::string url, short depth)
+{
+    // полный процессинг ресурса: получение слов, сохранение а базу данных, получение внутренних ресурсов
+    std::string html = download(url);
+    std::vector<std::string> words = getWords(html);
+    std::vector<std::string> subUrls = getSubUrls(html);
+    savePresencesToDb(words, url);
+
+    // если глубина не 1, обход внутренних ресурсов с уменьшенной на 1 глубиной
+    // если рекурсивно (или сразу) попали сюда с глубиной 1, дальнейшего обхода не будет
+    if (depth != 1) {
+        depth--;
+        for (auto& subUrl : subUrls) {
+            processUrl(subUrl, depth);
+        }
+    }
+}
+
 std::string Crowler::download(std::string url)
 {
     try
@@ -48,13 +66,6 @@ std::string Crowler::download(std::string url)
         // These objects perform our I/O
         tcp::resolver resolver(ioc);
         beast::ssl_stream<beast::tcp_stream> stream(ioc, ctx);
-
-        // Set SNI Hostname (many hosts need this to handshake successfully)
-        // if(! SSL_set_tlsext_host_name(stream.native_handle(), host))
-        // {
-        //     beast::error_code ec{static_cast<int>(::ERR_get_error()), net::error::get_ssl_category()};
-        //     throw beast::system_error{ec};
-        // }
 
         // Look up the domain name
         auto const results = resolver.resolve(host, port);
@@ -83,22 +94,8 @@ std::string Crowler::download(std::string url)
         http::read(stream, buffer, res);
 
         std::string const strBody = boost::beast::buffers_to_string(res.body().data());
-        // std::cout << res << std::endl;
-        // std::cout << boost::beast::buffers_to_string(res.body().data()) << std::endl;
-
-        // Gracefully close the stream
         beast::error_code ec;
         stream.shutdown(ec);
-        // if(ec == net::error::eof)
-        // {
-        //     // Rationale:
-        //     // http://stackoverflow.com/questions/25587403/boost-asio-ssl-async-shutdown-always-finishes-with-an-error
-        //     ec = {};
-        // }
-        // if(ec)
-        //     throw beast::system_error{ec};
-
-        // If we get here then the connection is closed gracefully
         return strBody;
     }
     catch(std::exception const& e)
@@ -136,7 +133,7 @@ std::vector<std::string> Crowler::getSubUrls(std::string s)
     return getDataFromHtml(s, word_regex);
 }
 
-std::vector<WordPresence> Crowler::calculatePresences(std::vector<std::string> words, std::string url)
+void Crowler::savePresencesToDb(std::vector<std::string> words, std::string url)
 {
     std::vector<WordPresence> wordsPresence;
 
@@ -146,11 +143,11 @@ std::vector<WordPresence> Crowler::calculatePresences(std::vector<std::string> w
         ++map[word];
     }
 
-    // преобразование map к вектору структур
+    // преобразование map к структуре и сохранение в базу данных
+    DbManager dbManager = DbManager();
     for (const auto& wordFrequency : map) {
         WordPresence presence = WordPresence{wordFrequency.first, url, wordFrequency.second};
-        wordsPresence.push_back(presence);
+        dbManager.insertPresence(presence);
     }
 
-    return wordsPresence;
 }
