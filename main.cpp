@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include "Crowler.h"
+#include "Searcher.h"
 
 
 int main()
@@ -25,7 +26,7 @@ int main()
     // }
 
     // std::vector<int> test = {1, 2, 3, 4, 5};
-    DbManager dbManager = DbManager();
+    // DbManager dbManager = DbManager();
     // unsigned int id = dbManager.insertWord("какжетак6");
     // std::cout << id << std::endl;
 
@@ -51,6 +52,7 @@ int main()
     //     std::cout << i << std::endl;
     // }
 
+    Searcher searcher = Searcher();
     std::vector<std::string> words;
     words.push_back("привет");
     words.push_back("мир");
@@ -58,7 +60,7 @@ int main()
     // for (auto& i : urlIds) {
     //     std::cout << i << std::endl;
     // }
-    std::vector<std::string> urls = dbManager.getSortedUrlsByWords(words);
+    std::vector<std::string> urls = searcher.processSearchRequest(words);
     for (auto& i : urls) {
         std::cout << i << std::endl;
     }

@@ -11,6 +11,8 @@ DbManager::DbManager()
                                     "dbname=searcher "
                                     "user=searcher "
                                     "password=searcher");
+        createTables();
+
     } catch (pqxx::sql_error e) {
         std::cout << e.what() << std::endl;
     }
@@ -24,12 +26,14 @@ DbManager::~DbManager()
 
 void DbManager::createTables()
 {
+    // создание таблиц при первом запуске
+
     pqxx::transaction<> tx{ *conn };
 
     // таблица слов
     tx.exec("CREATE TABLE IF NOT EXISTS words ( "
             "id SERIAL primary key, "
-            "word varchar(32) not null uniq "
+            "word varchar(32) not null unique "
             ");");
 
     // таблица ресурсов
@@ -45,7 +49,7 @@ void DbManager::createTables()
             "url_id serial, "
             "frequency int not null, "
 
-            "UNIQUE KEY (word_id, url_id)"
+            "CONSTRAINT uniq_word_url UNIQUE(word_id, url_id), "
             "FOREIGN KEY (word_id) REFERENCES words (id), "
             "FOREIGN KEY (url_id) REFERENCES urls (id) "
             ");");
@@ -55,6 +59,8 @@ void DbManager::createTables()
 
 std::string DbManager::getStringFromVector(std::vector<int> sourceVector)
 {
+    // преобразование верктора int к их перечислению через запятую (для использования в SELECT)
+
     std::string line = "";
     auto it = sourceVector.begin();
     int val = *it;
@@ -72,8 +78,11 @@ std::string DbManager::getStringFromVector(std::vector<int> sourceVector)
 
 template <typename T>
 std::vector<std::pair<T, std::size_t>> DbManager::adjacent_count(const std::vector<T>& v)
-// https://stackoverflow.com/questions/39596336/how-to-count-equal-adjacent-elements-in-a-vector
 {
+    // преобразование списка ресурсов к таблице ресурс - количество
+    // источник готовой функции:
+    // https://stackoverflow.com/questions/39596336/how-to-count-equal-adjacent-elements-in-a-vector
+
     std::vector<std::pair<T, std::size_t>> res;
 
     for (auto it = v.begin(), e = v.end(); it != e; /*Empty*/) {
@@ -89,6 +98,8 @@ std::vector<std::pair<T, std::size_t>> DbManager::adjacent_count(const std::vect
 
 unsigned int DbManager::insertWord(std::string word)
 {
+    // добавление слова в базу данных
+
     try {
         pqxx::transaction<> tx{ *conn };
         pqxx::result r = tx.exec(
@@ -108,6 +119,8 @@ unsigned int DbManager::insertWord(std::string word)
 
 unsigned int DbManager::insertUrl(std::string url)
 {
+    // добавление ресурса в базу данных
+
     try {
         pqxx::transaction<> tx{ *conn };
         pqxx::result r = tx.exec(
@@ -127,6 +140,8 @@ unsigned int DbManager::insertUrl(std::string url)
 
 bool DbManager::insertPresence(WordPresence presence)
 {
+    // добавление новой частоты в базу данных, а также слова и ресурса, если их еще нет
+
     try {
         std::string word = presence.word;
         std::string url = presence.url;
@@ -161,6 +176,8 @@ bool DbManager::insertPresence(WordPresence presence)
 
 unsigned int DbManager::getWordId(std::string word)
 {
+    // получение id слова
+
     try {
         pqxx::work tx{ *conn };
         unsigned int id = tx.query_value<unsigned int>("select id from words " "where word = '" + tx.esc(word) + "';");
@@ -172,6 +189,8 @@ unsigned int DbManager::getWordId(std::string word)
 
 unsigned int DbManager::getUrlId(std::string url)
 {
+    // получение id ресурса
+
     try {
         pqxx::work tx{ *conn };
         unsigned int id = tx.query_value<unsigned int>("select id from urls " "where url = '" + tx.esc(url) + "';");
@@ -183,6 +202,8 @@ unsigned int DbManager::getUrlId(std::string url)
 
 std::vector<int> DbManager::getWordsIds(std::vector<std::string> words)
 {
+    // получние id слов по списку слов
+
     std::vector<int> ids;
     for (auto& word : words) {
         ids.push_back(getWordId(word));
@@ -192,6 +213,8 @@ std::vector<int> DbManager::getWordsIds(std::vector<std::string> words)
 
 std::vector<int> DbManager::getUrlsIdsByWord(std::string word)
 {
+    // получение ресурсов по конкретному слову из таблицы частот
+
     std::vector<int> urlIds;
     int wordId = getWordId(word);
     std::string wordIdStr = std::to_string(wordId);
@@ -205,6 +228,9 @@ std::vector<int> DbManager::getUrlsIdsByWord(std::string word)
 
 std::vector<int> DbManager::getUrlsIdsByWords(std::vector<std::string> words)
 {
+    // получение ресурсов, каждый из которых содержит все слова из запроса
+
+    // получение просто всех ресурсов по словам из таблицы частот
     std::vector<int> urlIds;
     std::vector<int> urlIdsAccepted;
     std::vector<int> word_ids = getWordsIds(words);
@@ -213,6 +239,7 @@ std::vector<int> DbManager::getUrlsIdsByWords(std::vector<std::string> words)
         urlIds.push_back(urlIdd);
     }
 
+    // фильтрация ответа по тем ресурсам, которых вернулось не меньше, чем слов
     for (auto pair : adjacent_count(urlIds)) {
         int urlId = pair.first;
         int count = pair.second;
@@ -225,6 +252,8 @@ std::vector<int> DbManager::getUrlsIdsByWords(std::vector<std::string> words)
 
 std::vector<std::string> DbManager::getSortedUrlsByWords(std::vector<std::string> words)
 {
+    // получение списка ресурсов, сразу отсортированного по сумме вхождений слов
+
     std::vector<int> url_ids = getUrlsIdsByWords(words);
     std::vector<int> word_ids = getWordsIds(words);
 
