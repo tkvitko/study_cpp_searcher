@@ -7,7 +7,7 @@
 DbManager::DbManager()
 {
 
-    IniParser parser("/Users/tkvitko/c/netology/cpp_diploma/cpp_search_qt_creator/config.ini"); // не хочет работать с "./config.ini"
+    IniParser parser(CONFIG_PATH);
     std::string host = parser.get_value<std::string>("Db.host");
     std::string port = parser.get_value<std::string>("Db.port");
     std::string dbname = parser.get_value<std::string>("Db.name");

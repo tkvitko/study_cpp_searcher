@@ -4,6 +4,7 @@
 #include <string>
 #include <pqxx/pqxx>
 #include <iostream>
+#include "constants.h"
 
 
 struct WordPresence {

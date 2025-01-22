@@ -92,6 +92,12 @@ std::string Crowler::download(std::string url)
         // Make the connection on the IP address we get from a lookup
         beast::get_lowest_layer(stream).connect(results);
 
+        if (!SSL_set_tlsext_host_name(stream.native_handle(), host.c_str()))
+        {
+            boost::system::error_code ec{ static_cast<int>(::ERR_get_error()), boost::asio::error::get_ssl_category() };
+            throw boost::system::system_error{ ec };
+        }
+
         // Perform the SSL handshake
         stream.handshake(ssl::stream_base::client);
 
@@ -174,7 +180,7 @@ void Crowler::savePresencesToDb(std::vector<std::string> words, std::string url)
 
 void Crowler::processStartPage()
 {
-    IniParser parser("/Users/tkvitko/c/netology/cpp_diploma/cpp_search_qt_creator/config.ini"); // не хочет работать с "./config.ini"
+    IniParser parser(CONFIG_PATH);
     std::string url = parser.get_value<std::string>("Crowler.startPage");
     unsigned short depth = parser.get_value<unsigned short>("Crowler.recursionDepth");
     addToCrowlingQueue(url, depth);

@@ -91,6 +91,9 @@ public:
     template <>
     float get_value(std::string value_path);
 
+    template <>
+    unsigned short get_value(std::string value_path);
+
 };
 
 #endif // INIPARSER_H

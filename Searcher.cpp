@@ -7,7 +7,12 @@ std::vector<std::string> Searcher::processSearchRequest(std::vector<std::string>
 {
     // получение ресурсов из базы данных для ответа на запрос
 
-    DbManager dbManager = DbManager();
-    std::vector<std::string> result = dbManager.getSortedUrlsByWords(words);
+    std::vector<std::string> result;
+    try {
+        DbManager dbManager = DbManager();
+        result = dbManager.getSortedUrlsByWords(words);
+    } catch (std::exception const& e) {
+        std::cout << e.what() << std::endl;
+    }
     return result;
 }
