@@ -14,6 +14,7 @@
 #include <iostream>
 #include <string>
 #include <unordered_map>
+#include <boost/algorithm/string.hpp>
 #include "DbManager.h"
 #include "IniParser.h"
 
@@ -58,12 +59,17 @@ void Crowler::processUrl(std::string domain, std::string path, short depth)
 
     // если глубина не 1, обход внутренних ресурсов с уменьшенной на 1 глубиной
     // если рекурсивно (или сразу) попали сюда с глубиной 1, дальнейшего обхода не будет
-    // if (depth != 1) {
-    //     depth--;
-    //     for (auto& subUrl : subUrls) {
-    //         processUrl(subUrl, depth);
-    //     }
-    // }
+    if (depth != 1) {
+        depth--;
+        for (auto& subUrl : subUrls) {
+            if (subUrl.size() > 1) {
+                std::pair<std::string, std::string> domain_path = parseSubUrl(domain, subUrl);
+                std::string domain = domain_path.first;
+                std::string path = domain_path.second;
+                processUrl(domain, path, depth);
+            }
+        }
+    }
 }
 
 std::string Crowler::download(std::string domain, std::string path)
@@ -136,7 +142,8 @@ std::string Crowler::download(std::string domain, std::string path)
                 break;
             default:
                 std::cout << "Unexpected HTTP status " << res.result_int() << "\n";
-                std::cout << domain + path << res.result_int() << "\n";
+                std::cout << domain << "\n";
+                std::cout << path << "\n";
                 break;
         }
         return strBody;
@@ -156,8 +163,8 @@ std::vector<std::string> Crowler::getDataFromHtml(std::string s, std::regex filt
 
     auto words_begin = std::sregex_iterator(s.begin(), s.end(), filter);
     auto words_end = std::sregex_iterator();
-    std::regex remove_prefix("<a href=");
-    std::regex remove_suffix("#.*");
+    std::regex remove_prefix("<a href=\"");
+    std::regex remove_suffix("[#\"].*");
 
     for (std::sregex_iterator i = words_begin; i != words_end; ++i) {
         std::smatch match = *i;
@@ -227,4 +234,24 @@ void Crowler::work() {
             std::this_thread::yield();
         }
     }
+}
+
+std::pair<std::string, std::string> Crowler::parseSubUrl(std::string domain, std::string subUrl) {
+
+    std::string path;
+
+    if (subUrl.find("http") != std::string::npos) {
+        std::vector<std::string> parts;
+        boost::split(parts, subUrl, boost::is_any_of("/"));
+        domain = parts[2];
+        path = parts[3];
+        for (size_t i=4; i<parts.size(); ++i) {
+            path += "/";
+            path += parts[i];
+        }
+    } else {
+        path = subUrl;
+    }
+    return std::pair(domain, path);
+
 }

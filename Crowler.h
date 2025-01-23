@@ -32,6 +32,8 @@ private:
     void addToCrowlingQueue(std::string domain, std::string pat, unsigned short depth);
     // методя для взятия очередной задачи на процессинг ресурса из очереди задач и процессинга
     void work();
+    // метод для разложения внутреннего url на domain и path
+    std::pair<std::string, std::string> parseSubUrl(std::string domain, std::string subUrl);
 
 public:
     Crowler();

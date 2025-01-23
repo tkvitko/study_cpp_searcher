@@ -5,6 +5,7 @@
 #include "Searcher.h"
 
 
+
 int main()
 {
     // Тестирование
@@ -68,5 +69,9 @@ int main()
     //     std::cout << i << std::endl;
     // }
 
+    // std::string subUrl = "http://google.com/index.php/Special:MyContributions";
+    // std::pair<std::string, std::string> test = parseSubUrl("www.ya.ru", subUrl);
+    // std::cout << test.first << std::endl;
+    // std::cout << test.second << std::endl;
     return 0;
 }
