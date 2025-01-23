@@ -30,7 +30,7 @@ int main()
 
     // std::vector<int> test = {1, 2, 3, 4, 5};
     // DbManager dbManager = DbManager();
-    // unsigned int id = dbManager.insertWord("какжетак6");
+    // unsigned int id = dbManager.insertWord("какжетак8");
     // std::cout << id << std::endl;
 
     // dbManager.insertWord("привет");

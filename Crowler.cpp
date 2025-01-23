@@ -43,31 +43,34 @@ Crowler::~Crowler()
     threadsPool_.clear();
 }
 
-void Crowler::processUrl(std::string url, short depth)
+void Crowler::processUrl(std::string domain, std::string path, short depth)
 {
     // полный процессинг ресурса: получение слов, сохранение а базу данных, получение внутренних ресурсов
-    std::string html = download(url);
+    std::string html = download(domain, path);
+    std::cout << html << std::endl;
     std::vector<std::string> words = getWords(html);
     std::vector<std::string> subUrls = getSubUrls(html);
+    for (auto& i : subUrls ) {
+        std::cout << i << std::endl;
+    }
+    std::string url = domain + path;
     savePresencesToDb(words, url);
 
     // если глубина не 1, обход внутренних ресурсов с уменьшенной на 1 глубиной
     // если рекурсивно (или сразу) попали сюда с глубиной 1, дальнейшего обхода не будет
-    if (depth != 1) {
-        depth--;
-        for (auto& subUrl : subUrls) {
-            processUrl(subUrl, depth);
-        }
-    }
+    // if (depth != 1) {
+    //     depth--;
+    //     for (auto& subUrl : subUrls) {
+    //         processUrl(subUrl, depth);
+    //     }
+    // }
 }
 
-std::string Crowler::download(std::string url)
+std::string Crowler::download(std::string domain, std::string path)
 {
     try
     {
-        std::string const host = url;
         std::string const port = "443";
-        std::string const target = "/";
         int const version = 11;
 
         // The io_context is required for all I/O
@@ -87,12 +90,12 @@ std::string Crowler::download(std::string url)
         beast::ssl_stream<beast::tcp_stream> stream(ioc, ctx);
 
         // Look up the domain name
-        auto const results = resolver.resolve(host, port);
+        auto const results = resolver.resolve(domain, port);
 
         // Make the connection on the IP address we get from a lookup
         beast::get_lowest_layer(stream).connect(results);
 
-        if (!SSL_set_tlsext_host_name(stream.native_handle(), host.c_str()))
+        if (!SSL_set_tlsext_host_name(stream.native_handle(), domain.c_str()))
         {
             boost::system::error_code ec{ static_cast<int>(::ERR_get_error()), boost::asio::error::get_ssl_category() };
             throw boost::system::system_error{ ec };
@@ -102,8 +105,8 @@ std::string Crowler::download(std::string url)
         stream.handshake(ssl::stream_base::client);
 
         // Set up an HTTP GET request message
-        http::request<http::string_body> req{http::verb::get, target, version};
-        req.set(http::field::host, host);
+        http::request<http::string_body> req{http::verb::get, path, version};
+        req.set(http::field::host, domain);
         req.set(http::field::user_agent, BOOST_BEAST_VERSION_STRING);
 
         // Send the HTTP request to the remote host
@@ -124,14 +127,16 @@ std::string Crowler::download(std::string url)
         switch(res.base().result_int()) {
             case 301:
                 std::cout << "Redirecting.....\n";
-                download(res.base()["Location"]);//.to_string());
+                download(res.base()["Location"], "");//.to_string());
                 break;
             case 200:
+            // default:
                 strBody = boost::beast::buffers_to_string(res.body().data());
                 stream.shutdown(ec);
                 break;
             default:
                 std::cout << "Unexpected HTTP status " << res.result_int() << "\n";
+                std::cout << domain + path << res.result_int() << "\n";
                 break;
         }
         return strBody;
@@ -157,7 +162,7 @@ std::vector<std::string> Crowler::getDataFromHtml(std::string s, std::regex filt
     for (std::sregex_iterator i = words_begin; i != words_end; ++i) {
         std::smatch match = *i;
         std::string match_without_prefix = std::regex_replace(match.str(), remove_prefix, "");
-        std::string match_str = std::regex_replace(match.str(), remove_suffix, "");
+        std::string match_str = std::regex_replace(match_without_prefix, remove_suffix, "");
         result.push_back(match_str);
     }
     return result;
@@ -200,14 +205,13 @@ void Crowler::processStartPage()
     IniParser parser(CONFIG_PATH);
     std::string domain = parser.get_value<std::string>("Crowler.startPageDomain");
     std::string path = parser.get_value<std::string>("Crowler.startPagePath");
-    std::string url = domain + path;
     unsigned short depth = parser.get_value<unsigned short>("Crowler.recursionDepth");
-    addToCrowlingQueue(url, depth);
+    addToCrowlingQueue(domain, path, depth);
 }
 
-void Crowler::addToCrowlingQueue(std::string url, unsigned short depth)
+void Crowler::addToCrowlingQueue(std::string domain, std::string path, unsigned short depth)
 {
-    UrlCrowlingTask task = {url, depth};
+    UrlCrowlingTask task = {domain, path, depth};
     tasksQueue_.push(task);
 }
 
@@ -217,7 +221,7 @@ void Crowler::work() {
             // если в очереди задач есть задачи, вынимаем одну и выполняем
             UrlCrowlingTask task;
             tasksQueue_.pop(task);
-            processUrl(task.url, task.depth);
+            processUrl(task.domain, task.path, task.depth);
         } else {
             // иначе передаем управление другому потоку
             std::this_thread::yield();

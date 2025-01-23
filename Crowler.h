@@ -17,7 +17,7 @@ private:
     SafeQueue tasksQueue_;
 
     // скачивание html по url
-    std::string download(std::string url);
+    std::string download(std::string domain, std::string path);
     // получение данных из HTML
     std::vector<std::string> getDataFromHtml(std::string s, std::regex filter);
     // получение слов из скачанного html
@@ -27,9 +27,9 @@ private:
     // вычисление частот слов и сохранение данных в базу
     void savePresencesToDb(std::vector<std::string> words, std::string url);
     // обход ресурса
-    void processUrl(std::string url, short depth);
+    void processUrl(std::string domain, std::string path, short depth);
     // добавление задачи в очередь на обход
-    void addToCrowlingQueue(std::string url, unsigned short depth);
+    void addToCrowlingQueue(std::string domain, std::string pat, unsigned short depth);
     // методя для взятия очередной задачи на процессинг ресурса из очереди задач и процессинга
     void work();
 

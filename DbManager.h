@@ -25,7 +25,7 @@ public:
     // метод для получения наличия слов по поисковому запросу
     std::vector<std::string> getSortedUrlsByWords(std::vector<std::string> words);
 
-private:
+// private:
     // параметры подключения к базе данных
     pqxx::connection* conn = nullptr;
 

@@ -7,7 +7,8 @@
 
 struct UrlCrowlingTask {
     // Структура, описывающая задачу на обход ресурса
-    std::string url;
+    std::string domain;
+    std::string path;
     unsigned short depth;
 };
 
