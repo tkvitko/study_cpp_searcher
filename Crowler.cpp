@@ -48,12 +48,12 @@ void Crowler::processUrl(std::string domain, std::string path, short depth)
 {
     // полный процессинг ресурса: получение слов, сохранение а базу данных, получение внутренних ресурсов
     std::string html = download(domain, path);
-    std::cout << html << std::endl;
+    // std::cout << html << std::endl; // test
     std::vector<std::string> words = getWords(html);
     std::vector<std::string> subUrls = getSubUrls(html);
-    for (auto& i : subUrls ) {
-        std::cout << i << std::endl;
-    }
+    // for (auto& i : subUrls ) {
+    //     std::cout << i << std::endl;
+    // }
     std::string url = domain + path;
     savePresencesToDb(words, url);
 
@@ -205,7 +205,6 @@ void Crowler::savePresencesToDb(std::vector<std::string> words, std::string url)
     }
 
 }
-
 
 void Crowler::processStartPage()
 {
