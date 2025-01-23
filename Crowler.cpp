@@ -118,10 +118,25 @@ std::string Crowler::download(std::string url)
         // Receive the HTTP response
         http::read(stream, buffer, res);
 
-        std::string const strBody = boost::beast::buffers_to_string(res.body().data());
+        std::string strBody;
         beast::error_code ec;
-        stream.shutdown(ec);
+
+        switch(res.base().result_int()) {
+            case 301:
+                std::cout << "Redirecting.....\n";
+                download(res.base()["Location"]);//.to_string());
+                break;
+            case 200:
+                strBody = boost::beast::buffers_to_string(res.body().data());
+                stream.shutdown(ec);
+                break;
+            default:
+                std::cout << "Unexpected HTTP status " << res.result_int() << "\n";
+                break;
+        }
         return strBody;
+
+
     }
     catch(std::exception const& e)
     {
@@ -136,11 +151,13 @@ std::vector<std::string> Crowler::getDataFromHtml(std::string s, std::regex filt
 
     auto words_begin = std::sregex_iterator(s.begin(), s.end(), filter);
     auto words_end = std::sregex_iterator();
-    std::regex remove("<a href=");
+    std::regex remove_prefix("<a href=");
+    std::regex remove_suffix("#.*");
 
     for (std::sregex_iterator i = words_begin; i != words_end; ++i) {
         std::smatch match = *i;
-        std::string match_str = std::regex_replace(match.str(), remove, "");
+        std::string match_without_prefix = std::regex_replace(match.str(), remove_prefix, "");
+        std::string match_str = std::regex_replace(match.str(), remove_suffix, "");
         result.push_back(match_str);
     }
     return result;
@@ -181,7 +198,9 @@ void Crowler::savePresencesToDb(std::vector<std::string> words, std::string url)
 void Crowler::processStartPage()
 {
     IniParser parser(CONFIG_PATH);
-    std::string url = parser.get_value<std::string>("Crowler.startPage");
+    std::string domain = parser.get_value<std::string>("Crowler.startPageDomain");
+    std::string path = parser.get_value<std::string>("Crowler.startPagePath");
+    std::string url = domain + path;
     unsigned short depth = parser.get_value<unsigned short>("Crowler.recursionDepth");
     addToCrowlingQueue(url, depth);
 }
