@@ -85,7 +85,7 @@ std::string Crowler::download(std::string domain, std::string path)
 {
     try
     {
-        std::cout << "Crowling from " << domain  << " / "  << path << "...\n";
+        // std::cout << "Crowling from " << domain  << " / "  << path << "...\n";
         std::string const port = "443";
         int const version = 11;
 
