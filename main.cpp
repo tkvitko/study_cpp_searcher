@@ -3,15 +3,16 @@
 #include <vector>
 #include "Crowler.h"
 #include "Searcher.h"
+#include "DbManager.h"
 
 
 
 int main()
 {
-    // Тестирование
-
     Crowler crowler = Crowler();
     crowler.processStartPage();
+
+    // Тестирование
     // std::string res = crowler.download("litres.ru");
     // std::cout << res << std::endl;
     // std::vector<std::string> words = crowler.getWords(res);
@@ -73,5 +74,17 @@ int main()
     // std::pair<std::string, std::string> test = parseSubUrl("www.ya.ru", subUrl);
     // std::cout << test.first << std::endl;
     // std::cout << test.second << std::endl;
+
+    // DbManager dbManager = DbManager();
+    // Searcher searcher = Searcher();
+    // std::vector<std::string> testWords;
+    // testWords.push_back("what");
+    // std::vector<std::string> res = searcher.processSearchRequest(testWords);
+    // // std::vector<std::string> res = dbManager.getSortedUrlsByWords(testWords);
+    // std::cout << res.size() << "\n";
+    // for (auto& i : res) {
+    //     std::cout << i << std::endl;
+    // }
+
     return 0;
 }

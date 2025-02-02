@@ -47,10 +47,19 @@ Crowler::~Crowler()
 void Crowler::processUrl(std::string domain, std::string path, short depth)
 {
     // полный процессинг ресурса: получение слов, сохранение а базу данных, получение внутренних ресурсов
+    std::cout << "Processing sub url " << domain << path << "\n";
     std::string html = download(domain, path);
-    // std::cout << html << std::endl; // test
+    // std::cout << "\n\n\n\n===================================\n\n\n\n";
+    // std::cout << "HTML in processUrl func:\n" << html << std::endl; // test
     std::vector<std::string> words = getWords(html);
     std::vector<std::string> subUrls = getSubUrls(html);
+
+    // std::cout << "Got words:\n";
+    // for (auto& i : words ) {
+    //     std::cout << i << std::endl;
+    // }
+
+    // std::cout << "Got sub urls:\n";
     // for (auto& i : subUrls ) {
     //     std::cout << i << std::endl;
     // }
@@ -76,6 +85,7 @@ std::string Crowler::download(std::string domain, std::string path)
 {
     try
     {
+        std::cout << "Crowling from " << domain  << " / "  << path << "...\n";
         std::string const port = "443";
         int const version = 11;
 
@@ -129,14 +139,18 @@ std::string Crowler::download(std::string domain, std::string path)
 
         std::string strBody;
         beast::error_code ec;
+        std::string newLocation;
+        std::pair<std::string, std::string> newPair;
+        std::cout << "http status is " << res.base().result_int() << "\n";
 
         switch(res.base().result_int()) {
             case 301:
                 std::cout << "Redirecting.....\n";
-                download(res.base()["Location"], "");//.to_string());
+                newLocation = res.base()["Location"];
+                newPair = parseSubUrl(domain, newLocation);
+                strBody = download(newPair.first, "/" + newPair.second);
                 break;
             case 200:
-            // default:
                 strBody = boost::beast::buffers_to_string(res.body().data());
                 stream.shutdown(ec);
                 break;
@@ -146,6 +160,7 @@ std::string Crowler::download(std::string domain, std::string path)
                 std::cout << path << "\n";
                 break;
         }
+        // std::cout << "HTML in download func:\n" << strBody << "\n";
         return strBody;
 
 

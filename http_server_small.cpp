@@ -25,7 +25,8 @@
 #include <iostream>
 #include <memory>
 #include <string>
-#include "Searcher.h""
+#include "Searcher.h"
+#include "IniParser.h"
 
 namespace beast = boost::beast;         // from <boost/beast.hpp>
 namespace http = beast::http;           // from <boost/beast/http.hpp>
@@ -140,44 +141,16 @@ private:
     void
     create_response()
     {
-        if(request_.target() == "/count")
-        {
-            response_.set(http::field::content_type, "text/html");
-            beast::ostream(response_.body())
-                << "<html>\n"
-                <<  "<head><title>Request count</title></head>\n"
-                <<  "<body>\n"
-                <<  "<h1>Request count</h1>\n"
-                <<  "<p>There have been "
-                <<  my_program_state::request_count()
-                <<  " requests so far.</p>\n"
-                <<  "</body>\n"
-                <<  "</html>\n";
-        }
-        else if(request_.target() == "/time")
-        {
-            response_.set(http::field::content_type, "text/html");
-            beast::ostream(response_.body())
-                <<  "<html>\n"
-                <<  "<head><title>Current time</title></head>\n"
-                <<  "<body>\n"
-                <<  "<h1>Current time</h1>\n"
-                <<  "<p>The current time is "
-                <<  my_program_state::now()
-                <<  " seconds since the epoch.</p>\n"
-                <<  "</body>\n"
-                <<  "</html>\n";
-        }
-        else if(request_.target() == "/search")
+        if(request_.target() == "/")
         {
             response_.set(http::field::content_type, "text/html");
             beast::ostream(response_.body())
                 << "<!DOCTYPE html>\n"
                 << "<html>\n"
                 << "<body>\n"
-                << "<form action=\"/search\" method=\"post\">\n"
+                << "<form action=\"/\" method=\"post\">\n"
                 << "<label for=\"fname\">Search request:</label><br>\n"
-                << "<input type=\"text\" id=\"request\" name=\"request\" value=\"what?\"><br><br>\n"
+                << "<input type=\"text\" id=\"request\" name=\"request\" value=\"than\"><br><br>\n"
                 << "<input type=\"submit\" value=\"Submit\">\n"
                 << "</form>\n"
                 << "</body>\n"
@@ -225,25 +198,27 @@ private:
             std::cout << e.what() << std::endl;
         }
 
-        // преобразование списка ресурсов к HTML-формату
-        std::string hrefsStr = getHrefListStringFromVector(urls);
+        if (urls.size() > 0) {
+            // преобразование списка ресурсов к HTML-формату
+            std::string hrefsStr = getHrefListStringFromVector(urls);
 
-        // формирование ответа
-        response_.set(http::field::content_type, "text/html");
-        beast::ostream(response_.body())
-            << "<!DOCTYPE html>\n"
-            << "<html>\n"
-            << "<body>\n"
-            << "<form action=\"/search\" method=\"post\">\n"
-            << "<label for=\"fname\">Search request:</label><br>\n"
-            << "<input type=\"text\" id=\"request\" name=\"request\" value=\"what?\"><br><br>\n"
-            << "<input type=\"submit\" value=\"Submit\">\n"
-            << "</form>\n"
-            << "<p>\n"
-            << hrefsStr
-            << "</p>\n"
-            << "</body>\n"
-            << "</html>\n";
+            // формирование ответа
+            response_.set(http::field::content_type, "text/html");
+            beast::ostream(response_.body())
+                << "<!DOCTYPE html>\n"
+                << "<html>\n"
+                << "<body>\n"
+                << "<form action=\"/search\" method=\"post\">\n"
+                << "<label for=\"fname\">Search request:</label><br>\n"
+                << "<input type=\"text\" id=\"request\" name=\"request\" value=\"than\"><br><br>\n"
+                << "<input type=\"submit\" value=\"Submit\">\n"
+                << "</form>\n"
+                << "<p>\n"
+                << hrefsStr
+                << "</p>\n"
+                << "</body>\n"
+                << "</html>\n";
+        }
     }
 
     // Asynchronously transmit the response message.
@@ -285,25 +260,32 @@ private:
     {
         // преобразование вектора ресурсов к их перечислению в формате HTML
 
-        std::string line = "";
-        auto it = urlsVector.begin();
-        std::string val = *it;
-        line += "<a href=\">";
-        line += (val);
-        line += "\">";
-        line += (val);
-        line += "</a>";
+        std::string line = "No results";
+        if (urlsVector.size() > 0) {
 
-        while(it != urlsVector.end() - 1)
-        {
-            ++it;
-            line += "<br>";
+            std::string line = "";
+            auto it = urlsVector.begin();
             std::string val = *it;
-            line += "<a href=\">";
+            val = "https://" + val;
+            line += "<a href=\"";
             line += (val);
             line += "\">";
             line += (val);
             line += "</a>";
+
+            while(it != urlsVector.end() - 1)
+            {
+                ++it;
+                line += "<br>";
+                std::string val = *it;
+                val = "https://" + val;
+                line += "<a href=\"";
+                line += (val);
+                line += "\">";
+                line += (val);
+                line += "</a>";
+            }
+            return line;
         }
         return line;
     }
@@ -327,19 +309,10 @@ main(int argc, char* argv[])
 {
     try
     {
-        // Check command line arguments.
-        if(argc != 3)
-        {
-            std::cerr << "Usage: " << argv[0] << " <address> <port>\n";
-            std::cerr << "  For IPv4, try:\n";
-            std::cerr << "    receiver 0.0.0.0 80\n";
-            std::cerr << "  For IPv6, try:\n";
-            std::cerr << "    receiver 0::0 80\n";
-            return EXIT_FAILURE;
-        }
-
-        auto const address = net::ip::make_address(argv[1]);
-        unsigned short port = static_cast<unsigned short>(std::atoi(argv[2]));
+        IniParser parser(CONFIG_PATH);
+        std::string serverIp = parser.get_value<std::string>("Searcher.serverIp");
+        auto const address = net::ip::make_address(serverIp);
+        unsigned short port = parser.get_value<unsigned short>("Searcher.serverPort");
 
         net::io_context ioc{1};
 

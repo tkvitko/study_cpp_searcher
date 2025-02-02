@@ -243,39 +243,50 @@ std::vector<int> DbManager::getUrlsIdsByWords(std::vector<std::string> words)
     std::vector<int> urlIds;
     std::vector<int> urlIdsAccepted;
     std::vector<int> word_ids = getWordsIds(words);
+
     pqxx::work tx{ *conn };
     for (auto [urlIdd] : tx.query<int>("select url_id from frequencies " "where word_id in (" + getStringFromVector(word_ids) + ");")) {
         urlIds.push_back(urlIdd);
     }
+    // for (auto& i : urlIds) {
+    //     std::cout << i << "\n";
+    // }
 
     // фильтрация ответа по тем ресурсам, которых вернулось не меньше, чем слов
     for (auto pair : adjacent_count(urlIds)) {
         int urlId = pair.first;
         int count = pair.second;
+        // std::cout << urlId << "\n";
+        // std::cout << count << "\n";
+        // std::cout << words.size() << "\n";
         if (words.size() == count) {
             urlIdsAccepted.push_back(urlId);
         }
     }
+    // for (auto& i : urlIdsAccepted) {
+    //     std::cout << i << "\n";
+    // }
     return urlIdsAccepted;
 }
 
 std::vector<std::string> DbManager::getSortedUrlsByWords(std::vector<std::string> words)
 {
     // получение списка ресурсов, сразу отсортированного по сумме вхождений слов
-
+    std::vector<std::string> sortedUrls;
     std::vector<int> url_ids = getUrlsIdsByWords(words);
     std::vector<int> word_ids = getWordsIds(words);
 
-    std::vector<std::string> sortedUrls;
-    pqxx::work tx{ *conn };
-    for (auto& [url, freq] : tx.query<std::string, int>("select u.url, sum(f.frequency) sum_freq from frequencies f "
-                                                        "join words w on f.word_id = w.id "
-                                                        "join urls u on f.url_id = u.id "
-                                                        "where word_id in (" + getStringFromVector(word_ids) + ") "
-                                                        "and url_id in (" + getStringFromVector(url_ids) + ") "
-                                                        "group by url "
-                                                        "order by sum_freq DESC")) {
-        sortedUrls.push_back(url);
+    if (url_ids.size() > 0 and word_ids.size() > 0) {
+        pqxx::work tx{ *conn };
+        for (auto& [url, freq] : tx.query<std::string, int>("select u.url, sum(f.frequency) sum_freq from frequencies f "
+                                                            "join words w on f.word_id = w.id "
+                                                            "join urls u on f.url_id = u.id "
+                                                            "where word_id in (" + getStringFromVector(word_ids) + ") "
+                                                            "and url_id in (" + getStringFromVector(url_ids) + ") "
+                                                            "group by url "
+                                                            "order by sum_freq DESC")) {
+            sortedUrls.push_back(url);
+        }
     }
     return sortedUrls;
 }
