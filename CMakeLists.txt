@@ -23,6 +23,7 @@ if(Boost_FOUND)
         IniParser.h IniParser.cpp
         exceptions.h
         constants.h
+        README.MD
     )
     add_executable(http_server
         http_server_small.cpp
@@ -34,7 +35,7 @@ if(Boost_FOUND)
     add_subdirectory(./libpqxx-7.9.0 libpqxx-build)
     target_compile_features(crowler PRIVATE cxx_std_17)
     target_compile_features(http_server PRIVATE cxx_std_17)
-    target_link_libraries(crowler ${Boost_LIBRARIES} OpenSSL::SSL OpenSSL::Crypto pqxx)# "${PQXX_LIBRARIES}")
+    target_link_libraries(crowler ${Boost_LIBRARIES} OpenSSL::SSL OpenSSL::Crypto pqxx)
     target_link_libraries(http_server ${Boost_LIBRARIES} pqxx)
 endif()
 
